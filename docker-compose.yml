@@ -1,0 +1,17 @@
+version: "3"
+
+services:
+
+  tx-statistics-app:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: tx-statistics-app
+    ports:
+      - 8080:8080
+    networks:
+      - tx-statistics
+    restart: always
+
+networks:
+  tx-statistics:
