@@ -14,7 +14,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 @EnableAsync
 @EnableCaching
-@EntityScan(basePackages = {"com.n26"})
+@EntityScan(basePackages = {"org.tx.statistics"})
 public class Application {
 
     public static void main(String... args) {
