@@ -1,15 +1,16 @@
 package org.tx.statistics.api;
 
-import org.springframework.http.MediaType;
-import org.tx.statistics.api.requests.TransactionRequest;
-import org.tx.statistics.model.Statistics;
-import org.tx.statistics.services.StatisticsService;
 import org.hamcrest.core.IsEqual;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import org.tx.statistics.api.requests.TransactionRequest;
+import org.tx.statistics.model.Statistics;
+import org.tx.statistics.services.ComputationService;
+import org.tx.statistics.services.RealtimeService;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -22,7 +23,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class StatisticsControllerTest extends AbstractControllerTest {
 
     @MockBean
-    private StatisticsService service;
+    private ComputationService computationService;
+
+    @MockBean
+    private RealtimeService realtimeService;
 
     @Test
     public void testGetStatistics() throws Exception {
@@ -33,7 +37,7 @@ public class StatisticsControllerTest extends AbstractControllerTest {
         mock.setAvg(BigDecimal.valueOf(10));
         mock.setCount(10L);
 
-        when(service.getStatistics()).thenReturn(mock);
+        when(realtimeService.getRealtimeStatistics()).thenReturn(mock);
 
         mvc.perform(get("/statistics"))
                 .andExpect(MockMvcResultMatchers.status().isOk())
@@ -43,7 +47,7 @@ public class StatisticsControllerTest extends AbstractControllerTest {
                 .andExpect(jsonPath("$.count", IsEqual.equalTo(10)))
                 .andExpect(jsonPath("$.min", IsEqual.equalTo("10.00")));
 
-        verify(service).getStatistics();
+        verify(realtimeService).getRealtimeStatistics();
     }
 
     @Test
@@ -51,14 +55,14 @@ public class StatisticsControllerTest extends AbstractControllerTest {
         String timestamp = "2018-07-17T09:59:51.312Z";
         TransactionRequest request = new TransactionRequest("11.11", timestamp);
 
-        when(service.registerTransaction(any())).thenReturn(UUID.randomUUID().toString());
+        when(computationService.computeStatistics(any())).thenReturn(UUID.randomUUID().toString());
 
         mvc.perform(post("/transactions")
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
                 .content(mapper.writeValueAsString(request)))
                 .andExpect(MockMvcResultMatchers.status().isCreated());
 
-        verify(service).registerTransaction(any());
+        verify(computationService).computeStatistics(any());
     }
 
     @Test
@@ -66,28 +70,29 @@ public class StatisticsControllerTest extends AbstractControllerTest {
         String timestamp = "2018-07-17T09:59:51.312Z";
         TransactionRequest request = new TransactionRequest("11.11", timestamp);
 
-        when(service.registerTransaction(any())).thenReturn(null);
+        when(computationService.computeStatistics(any())).thenReturn(null);
 
         mvc.perform(post("/transactions")
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
                 .content(mapper.writeValueAsString(request)))
                 .andExpect(MockMvcResultMatchers.status().isNoContent());
 
-        verify(service).registerTransaction(any());
+        verify(computationService).computeStatistics(any());
     }
 
     @Test
     public void testClearStatistics() throws Exception {
-        doNothing().when(service).resetStatistics();
+        doNothing().when(computationService).resetStatistics();
 
         mvc.perform(delete("/transactions"))
                 .andExpect(MockMvcResultMatchers.status().isNoContent());
 
-        verify(service).resetStatistics();
+        verify(computationService).resetStatistics();
     }
 
     @Before
     public void setup() {
-        Mockito.reset(service);
+        Mockito.reset(computationService);
+        Mockito.reset(realtimeService);
     }
 }

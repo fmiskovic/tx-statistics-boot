@@ -8,7 +8,8 @@ import org.tx.statistics.api.responses.StatisticsResponse;
 import org.tx.statistics.converters.StatisticsConverter;
 import org.tx.statistics.errors.InvalidAmountError;
 import org.tx.statistics.errors.TimestampError;
-import org.tx.statistics.services.StatisticsService;
+import org.tx.statistics.services.ComputationService;
+import org.tx.statistics.services.RealtimeService;
 
 import javax.validation.Valid;
 import java.net.URI;
@@ -17,13 +18,16 @@ import java.util.Objects;
 @RestController
 public class StatisticsController {
 
+    private final ComputationService computationService;
+
     private final StatisticsConverter converter;
 
-    private final StatisticsService service;
+    private final RealtimeService realtimeService;
 
-    public StatisticsController(StatisticsService service, StatisticsConverter converter) {
-        this.service = service;
+    public StatisticsController(StatisticsConverter converter, ComputationService computationService, RealtimeService realtimeService) {
         this.converter = converter;
+        this.computationService = computationService;
+        this.realtimeService = realtimeService;
     }
 
     /**
@@ -37,8 +41,8 @@ public class StatisticsController {
      * @throws TimestampError
      */
     @PostMapping("/transactions")
-    public ResponseEntity<URI> registerTransaction(@Valid @RequestBody TransactionRequest request) throws InvalidAmountError, TimestampError {
-        String id = service.registerTransaction(request);
+    public ResponseEntity<URI> computeStatistics(@Valid @RequestBody TransactionRequest request) throws InvalidAmountError, TimestampError {
+        String id = computationService.computeStatistics(request);
 
         // Send location in response if id is not null
         if (Objects.nonNull(id)) {
@@ -59,7 +63,7 @@ public class StatisticsController {
      */
     @DeleteMapping("/transactions")
     public ResponseEntity<Void> clearStatistics() {
-        service.resetStatistics();
+        computationService.resetStatistics();
         return ResponseEntity.noContent().build();
     }
 
@@ -70,6 +74,6 @@ public class StatisticsController {
      */
     @GetMapping("/statistics")
     public StatisticsResponse getStatistics() {
-        return converter.toResponse(service.getStatistics());
+        return converter.toResponse(realtimeService.getRealtimeStatistics());
     }
 }

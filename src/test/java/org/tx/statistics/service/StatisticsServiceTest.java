@@ -5,11 +5,11 @@ import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.tx.statistics.api.requests.TransactionRequest;
 import org.tx.statistics.date.DateProvider;
-import org.tx.statistics.errors.EntityNotFoundError;
 import org.tx.statistics.errors.InvalidAmountError;
 import org.tx.statistics.errors.TimestampError;
 import org.tx.statistics.model.Statistics;
-import org.tx.statistics.services.StatisticsService;
+import org.tx.statistics.services.ComputationService;
+import org.tx.statistics.services.RealtimeService;
 
 import java.time.Instant;
 
@@ -19,28 +19,31 @@ import static org.junit.Assert.assertNotNull;
 public class StatisticsServiceTest extends AbstractServiceTest {
 
     @Autowired
+    private ComputationService computationService;
+
+    @Autowired
     private DateProvider dateProvider;
 
     @Autowired
-    private StatisticsService service;
+    private RealtimeService realtimeService;
 
     @Before
     public void cleanup() {
-        service.resetStatistics();
+        computationService.resetStatistics();
     }
 
     @Test
-    public void testRegisterTransaction() throws InvalidAmountError, TimestampError, EntityNotFoundError {
+    public void testRegisterTransaction() throws InvalidAmountError, TimestampError {
         String amount = "12.33";
         String timestamp = dateProvider.fromTimestamp(Instant.now().minusSeconds(3));
 
         TransactionRequest request = new TransactionRequest();
         request.setAmount(amount);
         request.setTimestamp(timestamp);
-        String id = service.registerTransaction(request);
+        String id = computationService.computeStatistics(request);
         assertNotNull(id);
 
-        Statistics statistics = service.getStatistics();
+        Statistics statistics = realtimeService.getRealtimeStatistics();
         assertEquals(12.33, statistics.getAvg().doubleValue(), 0.00);
         assertEquals(12.33, statistics.getSum().doubleValue(), 0.00);
         assertEquals(12.33, statistics.getMax().doubleValue(), 0.00);
@@ -56,19 +59,19 @@ public class StatisticsServiceTest extends AbstractServiceTest {
         TransactionRequest request = new TransactionRequest();
         request.setAmount(amount);
         request.setTimestamp(timestamp);
-        String id = service.registerTransaction(request);
+        String id = computationService.computeStatistics(request);
         assertNotNull(id);
 
-        Statistics statistics = service.getStatistics();
+        Statistics statistics = realtimeService.getRealtimeStatistics();
         assertEquals(12.33, statistics.getAvg().doubleValue(), 0.0);
         assertEquals(12.33, statistics.getSum().doubleValue(), 0.0);
         assertEquals(12.33, statistics.getMax().doubleValue(), 0.0);
         assertEquals(12.33, statistics.getMin().doubleValue(), 0.0);
         assertEquals(1, statistics.getCount().intValue());
 
-        service.resetStatistics();
+        computationService.resetStatistics();
 
-        statistics = service.getStatistics();
+        statistics = realtimeService.getRealtimeStatistics();
         assertEquals(00.00, statistics.getAvg().doubleValue(), 0.0);
         assertEquals(00.00, statistics.getSum().doubleValue(), 0.0);
         assertEquals(0, statistics.getCount().intValue());
@@ -82,7 +85,7 @@ public class StatisticsServiceTest extends AbstractServiceTest {
         TransactionRequest request = new TransactionRequest();
         request.setAmount(amount);
         request.setTimestamp(timestamp);
-        service.registerTransaction(request);
+        computationService.computeStatistics(request);
     }
 
     @Test(expected = TimestampError.class)
@@ -93,7 +96,7 @@ public class StatisticsServiceTest extends AbstractServiceTest {
         TransactionRequest request = new TransactionRequest();
         request.setAmount(amount);
         request.setTimestamp(timestamp);
-        service.registerTransaction(request);
+        computationService.computeStatistics(request);
     }
 
     @Test(expected = TimestampError.class)
@@ -104,7 +107,7 @@ public class StatisticsServiceTest extends AbstractServiceTest {
         TransactionRequest request = new TransactionRequest();
         request.setAmount(amount);
         request.setTimestamp(timestamp);
-        service.registerTransaction(request);
+        computationService.computeStatistics(request);
     }
 
     @Test
@@ -114,12 +117,12 @@ public class StatisticsServiceTest extends AbstractServiceTest {
         String timestamp3 = dateProvider.fromTimestamp(Instant.now().minusSeconds(4));
         String timestamp4 = dateProvider.fromTimestamp(Instant.now().minusSeconds(69));
 
-        service.registerTransaction(new TransactionRequest("12.00", timestamp1));
-        service.registerTransaction(new TransactionRequest("13.00", timestamp2));
-        service.registerTransaction(new TransactionRequest("14.00", timestamp3));
-        service.registerTransaction(new TransactionRequest("15.00", timestamp4));
+        computationService.computeStatistics(new TransactionRequest("12.00", timestamp1));
+        computationService.computeStatistics(new TransactionRequest("13.00", timestamp2));
+        computationService.computeStatistics(new TransactionRequest("14.00", timestamp3));
+        computationService.computeStatistics(new TransactionRequest("15.00", timestamp4));
 
-        Statistics statistics = service.getStatistics();
+        Statistics statistics = realtimeService.getRealtimeStatistics();
         assertEquals(13.00, statistics.getAvg().doubleValue(), 0.0);
         assertEquals(39.00, statistics.getSum().doubleValue(), 0.0);
         assertEquals(14.00, statistics.getMax().doubleValue(), 0.0);
